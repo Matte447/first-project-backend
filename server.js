@@ -45,11 +45,49 @@ app.use(function (req, res, next){
 })
 
 app.get("/", (req, res) => {
+    if (req.user){
+        return res.render("dashboard")
+    }
+
     res.render("homepage")
 })
 
 app.get("/login", (req, res) => {
     res.render("login")
+})
+
+app.get("/logout", (req, res) => {
+    res.clearCookie("ourSimpleApp")
+    res.redirect("/")
+})
+
+app.post("/login", (req, res) => {
+    let errors = []
+
+    if (typeof req.body.username !== "string") req.body.username = ""
+    if (typeof req.body.password !== "string") req.body.password = ""
+
+    if(req.body.username.trim() == "") errors = ["Invalid username / password"]
+    if(req.body.password == "") errors = ["Invalid username / password"]
+
+    if (errors.length){
+        return res.render("/", {errors})
+    }
+
+    const userInQuestionStatement = db.prepare("SELECT * FROM users WHERE USERNAME = ?")
+    const userInQuestion = userInQuestionStatement.get(req.body.username)
+
+    if(!result){
+        errors = ["Invalid username / password"]
+        return res.render("login", {errors})
+    }
+
+    const matchOrNot = bcrypt.compareSync(req.body.password, userInQuestion.password)
+
+    if(!matchOrNot){
+        errors = ["Invalid username / password"]
+        return res.render("login", {errors})
+    }
 })
 
 app.post("/register", (req, res) => {
