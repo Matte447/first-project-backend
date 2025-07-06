@@ -77,17 +77,28 @@ app.post("/login", (req, res) => {
     const userInQuestionStatement = db.prepare("SELECT * FROM users WHERE USERNAME = ?")
     const userInQuestion = userInQuestionStatement.get(req.body.username)
 
-    if(!result){
-        errors = ["Invalid username / password"]
+    if(!userInQuestion){
+        errors = ["Invalid username / password user"]
         return res.render("login", {errors})
     }
 
     const matchOrNot = bcrypt.compareSync(req.body.password, userInQuestion.password)
 
     if(!matchOrNot){
-        errors = ["Invalid username / password"]
+        errors = ["Invalid username / password match"]
         return res.render("login", {errors})
     }
+
+    const ourTokenValue = jwt.sign({exp: Math.floor(Date.now() / 1000) + 60*60*24, skyColor: "blue", userid: userInQuestion.id, username: userInQuestion.username}, process.env.JWTSECRET)
+
+    res.cookie("ourSimpleApp", ourTokenValue, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "strict",
+        maxAge: 1000 * 60 * 60 * 24
+    })
+
+    res.redirect("/")
 })
 
 app.post("/register", (req, res) => {
@@ -114,7 +125,7 @@ app.post("/register", (req, res) => {
     
     //save the user into a database
     const salt = bcrypt.genSaltSync(10)
-    req.body.password = bcrypt.hashSync(req.body.username, salt);
+    req.body.password = bcrypt.hashSync(req.body.password, salt);
 
     const ourStatement = db.prepare("INSERT INTO users (username, password) VALUES (?, ?)");
     const result = ourStatement.run(req.body.username, req.body.password);
@@ -132,7 +143,7 @@ app.post("/register", (req, res) => {
         maxAge: 1000 * 60 * 60 * 24
     })
 
-    res.send("Thank you!")
+    res.redirect("/")
     
 })
 
