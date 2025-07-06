@@ -101,6 +101,22 @@ app.post("/login", (req, res) => {
     res.redirect("/")
 })
 
+function mustBeLoggedIn(req, res, next) {
+    if(req.user){
+        return next()
+    }
+    return res.redirect("/")
+}
+
+app.get("/create-post", mustBeLoggedIn, (req, res) => {
+    res.render("create-post")
+})
+
+app.post("/create-post", mustBeLoggedIn, (req, res) => {
+    console.log(req.body)
+    res.send("Thank you!")
+})
+
 app.post("/register", (req, res) => {
     const errors = []
 
@@ -113,6 +129,13 @@ app.post("/register", (req, res) => {
     if(req.body.username && req.body.username.length < 3) errors.push("Username must be at least 3 characters long.")
     if(req.body.username && req.body.username.length > 10) errors.push("Username cant be longer than 10 characters.")
     if(req.body.username && !req.body.username.match(/^[a-zA-Z0-9]+$/)) errors.push("Username can only contain letters and numbers.")
+
+    // check if username exists already
+
+    const usernameStatement = db.prepare("SELECT * FROM users WHERE username = ?")
+    const usernameCheck = usernameStatement.get(req.body.username)
+
+    if(usernameCheck) errors.push("That username is already taken. Please choose a different one.")
     
     if(!req.body.password) errors.push("Please provide a password")
     if(req.body.password && req.body.password.length < 8) errors.push("Password must be at least 8 characters long.")
